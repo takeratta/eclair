@@ -9,9 +9,9 @@ import akka.pattern.pipe
 import akka.testkit.{TestKit, TestProbe}
 import com.typesafe.config.ConfigFactory
 import fr.acinq.bitcoin.{MilliBtc, Satoshi, Script}
+import fr.acinq.eclair.randomKey
 import fr.acinq.eclair.blockchain._
 import fr.acinq.eclair.blockchain.bitcoind.rpc.BitcoinJsonRPCClient
-import fr.acinq.eclair.randomKey
 import fr.acinq.eclair.transactions.Scripts
 import grizzled.slf4j.Logging
 import org.bitcoinj.script.{Script => BitcoinjScript}

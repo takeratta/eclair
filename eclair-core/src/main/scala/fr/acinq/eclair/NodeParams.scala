@@ -12,6 +12,7 @@ import fr.acinq.bitcoin.DeterministicWallet.ExtendedPrivateKey
 import fr.acinq.bitcoin.{BinaryData, Block, DeterministicWallet}
 import fr.acinq.eclair.NodeParams.WatcherType
 import fr.acinq.eclair.channel.Channel
+import fr.acinq.eclair.crypto.KeyManagement
 import fr.acinq.eclair.db._
 import fr.acinq.eclair.db.sqlite._
 import fr.acinq.eclair.wire.Color
@@ -22,8 +23,7 @@ import scala.concurrent.duration.FiniteDuration
 /**
   * Created by PM on 26/02/2017.
   */
-case class NodeParams(extendedPrivateKey: ExtendedPrivateKey,
-                      privateKey: PrivateKey,
+case class NodeParams(nodeKey: ExtendedPrivateKey,
                       alias: String,
                       color: Color,
                       publicAddresses: List[InetSocketAddress],
@@ -56,6 +56,7 @@ case class NodeParams(extendedPrivateKey: ExtendedPrivateKey,
                       channelFlags: Byte,
                       channelExcludeDuration: FiniteDuration,
                       watcherType: WatcherType) {
+  val privateKey = nodeKey.privateKey
   val nodeId = privateKey.publicKey
 }
 
@@ -94,8 +95,7 @@ object NodeParams {
         Files.write(seedPath.toPath, seed)
         seed
     }
-    val master = DeterministicWallet.generate(seed)
-    val extendedPrivateKey = DeterministicWallet.derivePrivateKey(master, DeterministicWallet.hardened(46) :: DeterministicWallet.hardened(0) :: Nil)
+    val nodeKey = KeyManagement.NodeKeys.extendedPrivateKey(seed)
 
     val chain = config.getString("chain")
     val chainHash = chain match {
@@ -129,8 +129,7 @@ object NodeParams {
     require(maxAcceptedHtlcs <= Channel.MAX_ACCEPTED_HTLCS, s"max-accepted-htlcs must be lower than ${Channel.MAX_ACCEPTED_HTLCS}")
 
     NodeParams(
-      extendedPrivateKey = extendedPrivateKey,
-      privateKey = extendedPrivateKey.privateKey,
+      nodeKey = nodeKey,
       alias = config.getString("node-alias").take(32),
       color = Color(color.data(0), color.data(1), color.data(2)),
       publicAddresses = config.getStringList("server.public-ips").toList.map(ip => new InetSocketAddress(ip, config.getInt("server.port"))),
