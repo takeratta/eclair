@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import fr.acinq.bitcoin.Crypto.{Point, PrivateKey, PublicKey, Scalar}
 import fr.acinq.bitcoin.{BinaryData, DeterministicWallet, OutPoint, Transaction}
 import fr.acinq.eclair.UInt64
-import fr.acinq.eclair.crypto.{KeyManagement, Sphinx}
+import fr.acinq.eclair.crypto.{Sphinx}
 import fr.acinq.eclair.transactions.{CommitmentSpec, Transactions}
 import fr.acinq.eclair.transactions.Transactions.CommitTx
 import fr.acinq.eclair.wire.{AcceptChannel, ChannelAnnouncement, ChannelUpdate, ClosingSigned, FailureMessage, FundingCreated, FundingLocked, FundingSigned, Init, OpenChannel, Shutdown, UpdateAddHtlc}
@@ -164,8 +164,7 @@ final case class DATA_CLOSING(commitments: Commitments,
   require(spendingTxes.size > 0, "there must be at least one tx published in this state")
 }
 
-final case class LocalParams(nodeKey: DeterministicWallet.ExtendedPrivateKey,
-                             channelNumber: Long,
+final case class LocalParams(channelNumber: Long,
                              dustLimitSatoshis: Long,
                              maxHtlcValueInFlightMsat: UInt64,
                              channelReserveSatoshis: Long,
@@ -175,21 +174,7 @@ final case class LocalParams(nodeKey: DeterministicWallet.ExtendedPrivateKey,
                              isFunder: Boolean,
                              globalFeatures: BinaryData,
                              localFeatures: BinaryData,
-                             defaultFinalScriptPubKey: BinaryData) {
-  val nodeId = nodeKey.publicKey
-  val channelKeys = new KeyManagement.ChannelKeys(nodeKey, channelNumber)
-  val fundingPrivKey = channelKeys.fundingKey
-  val revocationSecret = channelKeys.revocationSecret
-  val paymentKey = channelKeys.paymentKey
-  val delayedPaymentKey = channelKeys.delayedPaymentKey
-  val htlcKey = channelKeys.htlcKey
-  val shaSeed = channelKeys.shaSeed
-  // precomputed for performance reasons
-  val paymentBasepoint = paymentKey.toPoint
-  val delayedPaymentBasepoint = delayedPaymentKey.toPoint
-  val revocationBasepoint = revocationSecret.toPoint
-  val htlcBasepoint = htlcKey.toPoint
-}
+                             defaultFinalScriptPubKey: BinaryData)
 
 final case class RemoteParams(nodeId: PublicKey,
                               dustLimitSatoshis: Long,

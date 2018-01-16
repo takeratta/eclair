@@ -8,7 +8,7 @@ import fr.acinq.bitcoin.{BinaryData, Crypto, DeterministicWallet, MilliSatoshi, 
 import fr.acinq.eclair._
 import fr.acinq.eclair.blockchain.EclairWallet
 import fr.acinq.eclair.channel._
-import fr.acinq.eclair.crypto.KeyManagement
+import fr.acinq.eclair.crypto.KeyManager
 import fr.acinq.eclair.crypto.TransportHandler.Listener
 import fr.acinq.eclair.router.{Rebroadcast, SendRoutingState}
 import fr.acinq.eclair.wire
@@ -19,7 +19,7 @@ import scala.util.Random
 /**
   * Created by PM on 26/08/2016.
   */
-class Peer(nodeParams: NodeParams, remoteNodeId: PublicKey, previousKnownAddress: Option[InetSocketAddress], authenticator: ActorRef, watcher: ActorRef, router: ActorRef, relayer: ActorRef, wallet: EclairWallet, storedChannels: Set[HasCommitments]) extends LoggingFSM[Peer.State, Peer.Data] {
+class Peer(nodeParams: NodeParams, remoteNodeId: PublicKey, previousKnownAddress: Option[InetSocketAddress], authenticator: ActorRef, watcher: ActorRef, router: ActorRef, relayer: ActorRef, wallet: EclairWallet, storedChannels: Set[HasCommitments], keyManager: KeyManager) extends LoggingFSM[Peer.State, Peer.Data] {
 
   import Peer._
 
@@ -251,7 +251,7 @@ class Peer(nodeParams: NodeParams, remoteNodeId: PublicKey, previousKnownAddress
   }
 
   def spawnChannel(nodeParams: NodeParams, transport: ActorRef): ActorRef = {
-    val channel = context.actorOf(Channel.props(nodeParams, wallet, remoteNodeId, watcher, router, relayer))
+    val channel = context.actorOf(Channel.props(nodeParams, wallet, remoteNodeId, watcher, router, relayer, keyManager))
     context watch channel
     channel
   }
@@ -271,7 +271,7 @@ object Peer {
 
   val RECONNECT_TIMER = "reconnect"
 
-  def props(nodeParams: NodeParams, remoteNodeId: PublicKey, previousKnownAddress: Option[InetSocketAddress], authenticator: ActorRef, watcher: ActorRef, router: ActorRef, relayer: ActorRef, wallet: EclairWallet, storedChannels: Set[HasCommitments]) = Props(new Peer(nodeParams, remoteNodeId, previousKnownAddress, authenticator, watcher, router, relayer, wallet: EclairWallet, storedChannels))
+  def props(nodeParams: NodeParams, remoteNodeId: PublicKey, previousKnownAddress: Option[InetSocketAddress], authenticator: ActorRef, watcher: ActorRef, router: ActorRef, relayer: ActorRef, wallet: EclairWallet, storedChannels: Set[HasCommitments], keyManager: KeyManager) = Props(new Peer(nodeParams, remoteNodeId, previousKnownAddress, authenticator, watcher, router, relayer, wallet: EclairWallet, storedChannels, keyManager))
 
   // @formatter:off
 
@@ -312,7 +312,7 @@ object Peer {
 
   def makeChannelParams(nodeParams: NodeParams, defaultFinalScriptPubKey: BinaryData, isFunder: Boolean, fundingSatoshis: Long, channelNumber: Long): LocalParams = {
     LocalParams(
-      nodeKey = nodeParams.nodeKey,
+      channelNumber,
       dustLimitSatoshis = nodeParams.dustLimitSatoshis,
       maxHtlcValueInFlightMsat = nodeParams.maxHtlcValueInFlightMsat,
       channelReserveSatoshis = (nodeParams.reserveToFundingRatio * fundingSatoshis).toLong,
@@ -322,7 +322,6 @@ object Peer {
       defaultFinalScriptPubKey = defaultFinalScriptPubKey,
       isFunder = isFunder,
       globalFeatures = nodeParams.globalFeatures,
-      localFeatures = nodeParams.localFeatures,
-      channelNumber = channelNumber)
+      localFeatures = nodeParams.localFeatures)
   }
 }
